@@ -1,10 +1,16 @@
+import eventlet
 from flask import g, Flask, request, render_template
+from flask_socketio import SocketIO
 import sqlite3
 import os
 
 DATABASE = './db.sqlite3'
+TABLE = "test"
 
 app = Flask(__name__)
+socketio = SocketIO(app)
+
+eventlet.monkey_patch()
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -22,7 +28,7 @@ def close_connection(exception):
 def init_db():
     cur = get_db().cursor()
     # TODO
-    cur.execute('CREATE TABLE test (value text);')
+    cur.execute(f'CREATE TABLE {TABLE} (value text);')
     get_db().commit()
 
 
@@ -30,7 +36,7 @@ def init_db():
 def hello():
     with app.app_context():
         cur = get_db().cursor()
-        cur.execute('select value from test')
+        cur.execute(f'select value from {TABLE}')
         data = cur.fetchall()
         cur.close()
         return render_template('test.html', data=data)
@@ -40,7 +46,16 @@ def add_data():
     data = request.get_data(as_text=True)
     with app.app_context():
         cur = get_db().cursor()
-        cur.execute('insert into test (value) values (?)', (data,))
+        cur.execute(f'insert into {TABLE} (value) values (?)', (data,))
+        get_db().commit()
+    socketio.emit('newdata', {'value': data})
+    return "OK"
+
+@app.route('/clear')
+def clear():
+    with app.app_context():
+        cur = get_db().cursor()
+        cur.execute(f'delete from {TABLE}')
         get_db().commit()
     return "OK"
 
@@ -49,4 +64,7 @@ if not os.path.exists(DATABASE):
         init_db()
 
 if __name__ == "__main__":
-    app.run('0.0.0.0', 8080)
+    host='0.0.0.0'
+    port = 8080
+    print(f'Running on {host}:{port}')
+    socketio.run(app, host, port)
