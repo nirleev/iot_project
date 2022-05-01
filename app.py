@@ -1,3 +1,4 @@
+from distutils.log import debug
 import eventlet
 from flask import g, Flask, request, render_template
 from flask_socketio import SocketIO
@@ -6,6 +7,7 @@ import sqlite3
 import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from argparse import ArgumentParser
 
 DATABASE = './db.sqlite3'
 TABLE_NAME = 'test'
@@ -117,5 +119,9 @@ if not os.path.exists(DATABASE):
 if __name__ == "__main__":
     host='0.0.0.0'
     port = 8080
-    print(f'Running on {host}:{port}')
-    socketio.run(app, host, port)
+    par = ArgumentParser()
+    par.add_argument('-d', action='store_true', dest='debug')
+    args = par.parse_args()
+    if not args.debug:
+        print(f'Running on {host}:{port}')
+    socketio.run(app, host, port, debug=args.debug)
