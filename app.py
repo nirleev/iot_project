@@ -33,6 +33,12 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+@app.after_request
+def add_header(response):
+    if 'Cache-Control' not in response.headers:
+        response.headers['Cache-Control'] = 'no-store'
+    return response
+
 @auth.verify_password
 def get_pw(username, password):
     with app.app_context():
@@ -62,7 +68,7 @@ def hello():
         cur.execute(f'select date, temperature from {TABLE_NAME}')
         data = cur.fetchall()
         cur.close()
-        return render_template('test.html', data=data)
+        return render_template('index.html', data=data)
 
 @app.route('/clear')
 @auth.login_required
@@ -74,6 +80,7 @@ def clear():
     return "Database cleared successfully"
 
 @app.route('/temp', methods=['POST'])
+@auth.login_required
 def add_data():
     status = validate_data(request.form)
     if status:
