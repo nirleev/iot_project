@@ -11,10 +11,12 @@
 </head>
 <body>
   <table id="main">
-    <th>Values <button>Clear</button></th>
+    <th>Date</th>
+    <th>Temperature <button>Clear</button></th>
     {%- for d in data %}
     <tr>
-      <td>{{ d['value'] }}</td>
+      <td>{{ d['date'] }}</td>
+      <td>{{ d['temperature'] }}</td>
     </tr>
     {%- endfor %}
   </table>

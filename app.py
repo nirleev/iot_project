@@ -3,9 +3,10 @@ from flask import g, Flask, request, render_template
 from flask_socketio import SocketIO
 import sqlite3
 import os
+from datetime import datetime
 
 DATABASE = './db.sqlite3'
-TABLE = "test"
+TABLE_NAME = 'test'
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -27,37 +28,48 @@ def close_connection(exception):
 
 def init_db():
     cur = get_db().cursor()
-    # TODO
-    cur.execute(f'CREATE TABLE {TABLE} (value text);')
+    cur.execute('CREATE TABLE {} (date datetime, temperature int);'.format(TABLE_NAME))
+    cur.execute('INSERT INTO {} (date, temperature) VALUES (\'2022-05-01 18:55:50\', 10);'.format(TABLE_NAME))
     get_db().commit()
-
 
 @app.route('/')
 def hello():
     with app.app_context():
         cur = get_db().cursor()
-        cur.execute(f'select value from {TABLE}')
+        cur.execute(f'select date, temperature from {TABLE_NAME}')
         data = cur.fetchall()
         cur.close()
         return render_template('test.html', data=data)
 
 @app.route('/temp', methods=['POST'])
 def add_data():
-    data = request.get_data(as_text=True)
-    with app.app_context():
-        cur = get_db().cursor()
-        cur.execute(f'insert into {TABLE} (value) values (?)', (data,))
-        get_db().commit()
-    socketio.emit('newdata', {'value': data})
-    return "OK"
+    status = validate_data(request.form)
+    if status:
+        f_date = request.form.get('date')
+        f_temp = request.form.get('temperature')
+        with app.app_context():
+            cur = get_db().cursor()
+            cur.execute('insert into test (date, temperature) values (?, ?)', (f_date,
+                                                                               f_temp,))
+            get_db().commit()
+        socketio.emit('newdata', {'date': f_date, 'temp': f_temp})
+        return "OK"
+    else:
+        return "BAD REQUEST"
 
-@app.route('/clear')
-def clear():
-    with app.app_context():
-        cur = get_db().cursor()
-        cur.execute(f'delete from {TABLE}')
-        get_db().commit()
-    return "OK"
+def validate_data(req):
+    date = req.get('date')
+    temp = req.get('temperature')
+
+    if date is not None and temp is not None:
+        try:
+            int(temp)
+            datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+            return True
+        except:
+            return False
+    else:
+        return False
 
 if not os.path.exists(DATABASE):
     with app.app_context():
