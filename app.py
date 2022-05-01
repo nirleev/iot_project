@@ -1,15 +1,22 @@
 import eventlet
 from flask import g, Flask, request, render_template
 from flask_socketio import SocketIO
+from flask_httpauth import HTTPBasicAuth
 import sqlite3
 import os
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 DATABASE = './db.sqlite3'
 TABLE_NAME = 'test'
+USER = 'username'
+PASW = 'password_hash'
 
 app = Flask(__name__)
+app.secret_key = b'#\x8a\xc7rI\x83\x92\x0eK\xfe=\xd9\x10I\xd4\xfa'
 socketio = SocketIO(app)
+
+auth = HTTPBasicAuth()
 
 eventlet.monkey_patch()
 
@@ -26,8 +33,24 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+@auth.verify_password
+def get_pw(username, password):
+    with app.app_context():
+        cur = get_db().cursor()
+        cur.execute(f'select {PASW} from admins where {USER}=?', (username,))
+        obj: sqlite3.Row = cur.fetchone()
+        if obj:
+            hash = obj[PASW]
+            if check_password_hash(hash, password):
+                return username
+        return None
+
 def init_db():
     cur = get_db().cursor()
+    users = {'admin': 'pbkdf2:sha256:260000$Om0TWYPSiXwtpXZr$91fe3791b21e82e85a7fa77d0b391ee5fa28fd55940f6c31cadcf6f5b96fe96e'}
+    cur.execute(f'CREATE TABLE admins ({USER} text, {PASW} text);')
+    for u, p in users.items():
+        cur.execute(f'INSERT INTO admins ({USER}, {PASW}) VALUES (\'{u}\', \'{p}\');')
     cur.execute('CREATE TABLE {} (date datetime, temperature int);'.format(TABLE_NAME))
     cur.execute('INSERT INTO {} (date, temperature) VALUES (\'2022-05-01 18:55:50\', 10);'.format(TABLE_NAME))
     get_db().commit()
@@ -40,6 +63,15 @@ def hello():
         data = cur.fetchall()
         cur.close()
         return render_template('test.html', data=data)
+
+@app.route('/clear')
+@auth.login_required
+def clear():
+    with app.app_context():
+        cur = get_db().cursor()
+        cur.execute(f'DELETE FROM {TABLE_NAME}')
+        get_db().commit()
+    return "Database cleared successfully"
 
 @app.route('/temp', methods=['POST'])
 def add_data():
