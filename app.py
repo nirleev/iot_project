@@ -22,6 +22,7 @@ auth = HTTPBasicAuth()
 
 eventlet.monkey_patch()
 
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -29,17 +30,20 @@ def get_db():
     db.row_factory = sqlite3.Row
     return db
 
+
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
 
+
 @app.after_request
 def add_header(response):
     if 'Cache-Control' not in response.headers:
         response.headers['Cache-Control'] = 'no-store'
     return response
+
 
 @auth.verify_password
 def get_pw(username, password):
@@ -53,6 +57,7 @@ def get_pw(username, password):
                 return username
         return None
 
+
 def init_db():
     cur = get_db().cursor()
     users = {'admin': 'pbkdf2:sha256:260000$Om0TWYPSiXwtpXZr$91fe3791b21e82e85a7fa77d0b391ee5fa28fd55940f6c31cadcf6f5b96fe96e'}
@@ -63,6 +68,7 @@ def init_db():
     cur.execute('INSERT INTO {} (date, temperature) VALUES (\'2022-05-01 18:55:50\', 10);'.format(TABLE_NAME))
     get_db().commit()
 
+
 @app.route('/')
 def hello():
     with app.app_context():
@@ -72,6 +78,13 @@ def hello():
         cur.close()
         return render_template('index.html', data=data)
 
+
+@app.route('/docs')
+def get_docs():
+    print('sending docs')
+    return render_template('swaggerui.html')
+
+
 @app.route('/clear')
 @auth.login_required
 def clear():
@@ -80,6 +93,7 @@ def clear():
         cur.execute(f'DELETE FROM {TABLE_NAME}')
         get_db().commit()
     return "Database cleared successfully"
+
 
 @app.route('/temp', methods=['POST'])
 @auth.login_required
@@ -98,6 +112,7 @@ def add_data():
     else:
         return "BAD REQUEST"
 
+
 def validate_data(req):
     date = req.get('date')
     temp = req.get('temperature')
@@ -112,12 +127,13 @@ def validate_data(req):
     else:
         return False
 
+
 if not os.path.exists(DATABASE):
     with app.app_context():
         init_db()
 
 if __name__ == "__main__":
-    host='0.0.0.0'
+    host = '0.0.0.0'
     port = 8080
     par = ArgumentParser()
     par.add_argument('-d', action='store_true', dest='debug')

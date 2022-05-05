@@ -1,0 +1,73 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "IoT Project"
+  },
+  "paths": {
+    "/temp": {
+      "post": {
+        "tags": [
+          "Temperature sensor"
+        ],
+        "description": "Adds a new temperature measurement",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "description": "datetime",
+            "schema": {
+              "type": "string",
+              "example": "2022-05-09 00:00:00"
+            }
+          },
+          {
+            "in": "query",
+            "name": "temperature",
+            "required": true,
+            "description": "temperature",
+            "schema": {
+              "type": "integer",
+              "example": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the result of parameters validation",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "OK"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clear": {
+      "get": {
+        "tags": [
+          "Temperature sensor"
+        ],
+        "description": "Clears the data of temperature measurements",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Database cleared successfully"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
