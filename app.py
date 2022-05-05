@@ -112,6 +112,9 @@ def add_data():
     else:
         return "BAD REQUEST"
 
+@app.route('/<path:path>')
+def static_file(path):
+    return app.send_static_file(path)
 
 def validate_data(req):
     date = req.get('date')
