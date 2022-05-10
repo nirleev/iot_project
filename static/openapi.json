@@ -4,35 +4,49 @@
     "version": "1.0.0",
     "title": "IoT Project"
   },
+  "components": {
+    "securitySchemes": {
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      }
+    }
+  },
   "paths": {
     "/temp": {
       "post": {
         "tags": [
           "Temperature sensor"
         ],
-        "description": "Adds a new temperature measurement",
-        "parameters": [
+        "security": [
           {
-            "in": "query",
-            "name": "date",
-            "required": true,
-            "description": "datetime",
-            "schema": {
-              "type": "string",
-              "example": "2022-05-09 00:00:00"
-            }
-          },
-          {
-            "in": "query",
-            "name": "temperature",
-            "required": true,
-            "description": "temperature",
-            "schema": {
-              "type": "integer",
-              "example": 10
-            }
+            "basicAuth": []
           }
         ],
+        "description": "Adds a new temperature measurement",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "description": "datetime",
+                    "example": "2022-05-09 00:00:00"
+                  },
+                  "temperature": {
+                    "type": "integer",
+                    "description": "temperature",
+                    "example": "10"
+                  }
+                },
+                "required": ["date"]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "the result of parameters validation",
@@ -52,6 +66,11 @@
       "get": {
         "tags": [
           "Temperature sensor"
+        ],
+        "security": [
+          {
+            "basicAuth": []
+          }
         ],
         "description": "Clears the data of temperature measurements",
         "responses": {
