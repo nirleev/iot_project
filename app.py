@@ -20,6 +20,7 @@ app.secret_key = b'#\x8a\xc7rI\x83\x92\x0eK\xfe=\xd9\x10I\xd4\xfa'
 socketio = SocketIO(app)
 
 app.config['SERIAL_TIMEOUT'] = 0.2
+# TODO: Device name may be different:
 app.config['SERIAL_PORT'] = '/dev/rfcomm0'
 app.config['SERIAL_BAUDRATE'] = 9600
 app.config['SERIAL_BYTESIZE'] = 8
