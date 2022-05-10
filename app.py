@@ -1,4 +1,3 @@
-from distutils.log import debug
 import eventlet
 from flask import g, Flask, request, render_template
 from flask_socketio import SocketIO
@@ -6,8 +5,10 @@ from flask_httpauth import HTTPBasicAuth
 import sqlite3
 import os
 from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 from argparse import ArgumentParser
+from flask_serial import Serial
+from datetime import datetime as dt
 
 DATABASE = './db.sqlite3'
 TABLE_NAME = 'test'
@@ -17,6 +18,15 @@ PASW = 'password_hash'
 app = Flask(__name__)
 app.secret_key = b'#\x8a\xc7rI\x83\x92\x0eK\xfe=\xd9\x10I\xd4\xfa'
 socketio = SocketIO(app)
+
+app.config['SERIAL_TIMEOUT'] = 0.2
+app.config['SERIAL_PORT'] = '/dev/rfcomm0'
+app.config['SERIAL_BAUDRATE'] = 9600
+app.config['SERIAL_BYTESIZE'] = 8
+app.config['SERIAL_PARITY'] = 'N'
+app.config['SERIAL_STOPBITS'] = 1
+
+ser = Serial(app)
 
 auth = HTTPBasicAuth()
 
@@ -44,6 +54,17 @@ def add_header(response):
         response.headers['Cache-Control'] = 'no-store'
     return response
 
+@ser.on_message()
+def serial_msg(data: bytes):
+    f_temp = data.decode('ascii').strip()
+    f_date = dt.now().strftime("%Y-%m-%d %H:%M:%S")
+    with app.app_context():
+        cur = get_db().cursor()
+        cur.execute('insert into test (date, temperature) values (?, ?)', (f_date,
+                                                                           f_temp,))
+        get_db().commit()
+    socketio.emit('newdata', {'date': f_date, 'temp': f_temp})
+    return "OK"
 
 @auth.verify_password
 def get_pw(username, password):
@@ -70,6 +91,7 @@ def init_db():
 
 
 @app.route('/')
+@auth.login_required
 def hello():
     with app.app_context():
         cur = get_db().cursor()
@@ -135,7 +157,7 @@ if not os.path.exists(DATABASE):
     with app.app_context():
         init_db()
 
-if __name__ == "__main__":
+def main():
     host = '0.0.0.0'
     port = 8080
     par = ArgumentParser()
@@ -144,3 +166,7 @@ if __name__ == "__main__":
     if not args.debug:
         print(f'Running on {host}:{port}')
     socketio.run(app, host, port, debug=args.debug)
+    print("Exit")
+
+if __name__ == "__main__":
+    main()
